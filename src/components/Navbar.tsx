@@ -12,7 +12,9 @@ import {
   Wrench,
   Menu,
   X,
-  Cpu
+  Cpu,
+  Calculator,
+  HelpCircle
 } from 'lucide-react';
 import { UserSettings } from '../types';
 
@@ -23,6 +25,8 @@ interface NavbarProps {
   settings: UserSettings;
   onOpenSettings: () => void;
   onOpenSearch: () => void;
+  onOpenCalculator: () => void;
+  onOpenTour: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -31,7 +35,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   savedCount,
   settings,
   onOpenSettings,
-  onOpenSearch
+  onOpenSearch,
+  onOpenCalculator,
+  onOpenTour
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -125,6 +131,26 @@ export const Navbar: React.FC<NavbarProps> = ({
               <kbd className="hidden md:inline text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-400 border border-slate-700">
                 ⌘K
               </kbd>
+            </button>
+
+            {/* Engineering Calculators Tool */}
+            <button
+              onClick={onOpenCalculator}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-teal-500/50 text-slate-300 hover:text-white text-xs transition-colors shadow-inner"
+              title="Engineering Tools & CNC Calculators"
+            >
+              <Calculator className="w-3.5 h-3.5 text-teal-400" />
+              <span className="hidden lg:inline text-[11px] font-medium">Tools</span>
+            </button>
+
+            {/* Guided Tour / Help */}
+            <button
+              onClick={onOpenTour}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-emerald-500/50 text-slate-300 hover:text-white text-xs transition-colors"
+              title="Platform Tour & How-to-use Guide"
+            >
+              <HelpCircle className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="hidden lg:inline text-[11px] font-medium">Guide</span>
             </button>
 
             {/* AI Provider Status Pill */}

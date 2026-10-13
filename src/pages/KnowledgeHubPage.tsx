@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   BookOpen,
   Search,
@@ -20,10 +20,13 @@ import {
   ExternalLink,
   Printer,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import { KNOWLEDGE_TOPICS } from '../data/knowledgeTopics';
 import { KnowledgeCategory } from '../types';
+import { speechService } from '../services/speechService';
 
 interface KnowledgeHubPageProps {
   initialTopicId?: string;
@@ -40,9 +43,39 @@ export const KnowledgeHubPage: React.FC<KnowledgeHubPageProps> = ({
     initialTopicId || KNOWLEDGE_TOPICS[0].id
   );
   const [searchQuery, setSearchQuery] = useState('');
+  const [isReadingTopic, setIsReadingTopic] = useState(false);
+
+  useEffect(() => {
+    const unsub = speechService.subscribe(speaking => {
+      if (!speaking) setIsReadingTopic(false);
+    });
+    return () => unsub();
+  }, []);
+
+  // Stop reading if user switches topics
+  useEffect(() => {
+    if (isReadingTopic) {
+      speechService.stop();
+      setIsReadingTopic(false);
+    }
+  }, [selectedTopicId]);
 
   const activeTopic =
     KNOWLEDGE_TOPICS.find(t => t.id === selectedTopicId) || KNOWLEDGE_TOPICS[0];
+
+  const handleToggleReadTopic = () => {
+    if (isReadingTopic) {
+      speechService.stop();
+      setIsReadingTopic(false);
+    } else {
+      const speechText = `${activeTopic.title}. ${activeTopic.tagline}. Definition: ${activeTopic.definition}. Working Principle: ${activeTopic.workingPrinciple}. Recommended safety guidelines: ${activeTopic.safetyConsiderations.join('. ')}.`;
+      speechService.speak(speechText, {
+        onStart: () => setIsReadingTopic(true),
+        onEnd: () => setIsReadingTopic(false),
+        onError: () => setIsReadingTopic(false)
+      });
+    }
+  };
 
   const getTopicIcon = (iconName: string) => {
     switch (iconName) {
@@ -179,6 +212,23 @@ export const KnowledgeHubPage: React.FC<KnowledgeHubPageProps> = ({
 
               {/* Action buttons */}
               <div className="flex items-center gap-2">
+                <button
+                  onClick={handleToggleReadTopic}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                    isReadingTopic
+                      ? 'bg-blue-500 text-white border-blue-400 animate-pulse font-bold'
+                      : 'bg-slate-800 hover:bg-slate-750 text-slate-300 border-slate-700'
+                  }`}
+                  title={isReadingTopic ? 'Stop Voice Narration' : 'Listen to this Process Blueprint Aloud'}
+                >
+                  {isReadingTopic ? (
+                    <VolumeX className="w-3.5 h-3.5" />
+                  ) : (
+                    <Volume2 className="w-3.5 h-3.5 text-blue-400" />
+                  )}
+                  <span>{isReadingTopic ? 'Stop Audio' : 'Read Aloud'}</span>
+                </button>
+
                 <button
                   onClick={() => window.print()}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 text-xs border border-slate-700"

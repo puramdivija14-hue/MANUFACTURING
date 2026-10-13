@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Sparkles,
   ClipboardList,
@@ -13,9 +13,12 @@ import {
   ChevronDown,
   ChevronUp,
   Share2,
-  Check
+  Check,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import { GeneratedIdea } from '../types';
+import { speechService } from '../services/speechService';
 
 interface IdeaCardProps {
   idea: GeneratedIdea;
@@ -36,6 +39,28 @@ export const IdeaCard: React.FC<IdeaCardProps> = ({
 }) => {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isReading, setIsReading] = useState(false);
+
+  useEffect(() => {
+    const unsub = speechService.subscribe(speaking => {
+      if (!speaking) setIsReading(false);
+    });
+    return () => unsub();
+  }, []);
+
+  const handleToggleRead = () => {
+    if (isReading) {
+      speechService.stop();
+      setIsReading(false);
+    } else {
+      const textToSpeak = `${idea.title}. Solution: ${idea.proposedSolution}. Specified materials: ${idea.materials.join(', ')}. Primary manufacturing method: ${idea.manufacturingMethod}. Target unit cost: ${idea.estimatedCostPerUnit || 'calculated in planner'}.`;
+      speechService.speak(textToSpeak, {
+        onStart: () => setIsReading(true),
+        onEnd: () => setIsReading(false),
+        onError: () => setIsReading(false)
+      });
+    }
+  };
 
   const getComplexityColor = (comp: string) => {
     switch (comp) {
@@ -116,6 +141,18 @@ export const IdeaCard: React.FC<IdeaCardProps> = ({
               title={isSaved ? 'Saved in Projects' : 'Save Idea'}
             >
               {isSaved ? <BookmarkCheck className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
+            </button>
+
+            <button
+              onClick={handleToggleRead}
+              className={`p-1.5 rounded-lg border transition-colors ${
+                isReading
+                  ? 'bg-emerald-500 text-slate-950 border-emerald-400 animate-pulse font-bold'
+                  : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+              }`}
+              title={isReading ? 'Stop Reading Aloud' : 'Listen to Proposal Aloud'}
+            >
+              {isReading ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
             </button>
 
             <button

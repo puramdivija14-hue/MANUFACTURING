@@ -13,7 +13,9 @@ import {
   AlertCircle,
   HelpCircle,
   Zap,
-  Info
+  Info,
+  Mic,
+  MicOff
 } from 'lucide-react';
 import {
   IdeaGenerationInput,
@@ -57,6 +59,41 @@ export const IdeaGeneratorPage: React.FC<IdeaGeneratorPageProps> = ({
   const [ideas, setIdeas] = useState<GeneratedIdea[]>([]);
   const [compareList, setCompareList] = useState<GeneratedIdea[]>([]);
   const [showCompareModal, setShowCompareModal] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+
+  const handleToggleVoiceProblem = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Speech recognition is not supported in this browser. Please try Chrome, Edge, or Safari.");
+      return;
+    }
+    if (isListening) {
+      setIsListening(false);
+      return;
+    }
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      recognition.onstart = () => setIsListening(true);
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        if (transcript) {
+          setForm(prev => ({
+            ...prev,
+            problem: prev.problem ? `${prev.problem} ${transcript}` : transcript
+          }));
+        }
+        setIsListening(false);
+      };
+      recognition.onerror = () => setIsListening(false);
+      recognition.onend = () => setIsListening(false);
+      recognition.start();
+    } catch {
+      setIsListening(false);
+    }
+  };
 
   const generationModes = [
     { id: 'brainstorming', label: 'Creative Brainstorming', desc: 'Divergent thinking for unconventional manufacturing forms' },
@@ -69,11 +106,12 @@ export const IdeaGeneratorPage: React.FC<IdeaGeneratorPageProps> = ({
     { id: 'process-optimization', label: 'Process Optimization', desc: 'Slashing cycle time, tool wear, and scrap percentage' }
   ];
 
-  const handleGenerate = async (e?: React.FormEvent) => {
+  const handleGenerate = async (e?: React.FormEvent, customForm?: IdeaGenerationInput) => {
     if (e) e.preventDefault();
     setLoading(true);
     try {
-      const result: GenerationResult<GeneratedIdea[]> = await aiService.generateIdeas(form);
+      const inputToUse = customForm || form;
+      const result: GenerationResult<GeneratedIdea[]> = await aiService.generateIdeas(inputToUse);
       setIdeas(result.data);
       setGenerationMeta({
         source: result.source,
@@ -98,16 +136,92 @@ export const IdeaGeneratorPage: React.FC<IdeaGeneratorPageProps> = ({
     }
   };
 
-  const handleApplyPreset = (preset: {
-    industry: string;
-    problem: string;
-    budget: string;
-    materials: string;
-    scale: IdeaGenerationInput['scale'];
-    objective: IdeaGenerationInput['objective'];
-    mode: IdeaGenerationInput['mode'];
-  }) => {
-    setForm(preset);
+  const starterPresets = [
+    {
+      name: '🌱 Agro-Waste Planter',
+      desc: 'Eco biomaterials & compression molding',
+      data: {
+        industry: 'Eco-Friendly Agriculture & Home Goods',
+        problem: 'Single-use plastic nursery pot waste and unutilized rice husk farm residues.',
+        budget: '$1,000 - $5,000 Pilot',
+        materials: 'Rice husks, sugarcane bagasse, potato starch binder, natural wax',
+        scale: 'small-batch' as const,
+        objective: 'reduce-waste' as const,
+        mode: 'waste-to-value' as const
+      }
+    },
+    {
+      name: '⚡ Precision Enclosure',
+      desc: 'Sheet metal CNC punch & press brake',
+      data: {
+        industry: 'Consumer Electronics & Lab Equipment',
+        problem: 'High electromagnetic interference (EMI) and costly tooling for low-volume metal enclosures.',
+        budget: '$3,000 - $10,000 Batch',
+        materials: '5052-H32 Aluminum sheet, extruded heatsink, captive M3 fasteners',
+        scale: 'small-batch' as const,
+        objective: 'reduce-cost' as const,
+        mode: 'low-cost' as const
+      }
+    },
+    {
+      name: '🤖 Automated Dispenser',
+      desc: 'Precision peristaltic fluid rig',
+      data: {
+        industry: 'Artisanal Food & Skincare Bottling',
+        problem: 'Inconsistent manual bottle filling causing liquid spills and slow takt times.',
+        budget: '$800 - $2,500 Machine Rig',
+        materials: '304 Stainless chassis, silicone Norprene tubing, NEMA stepper motor',
+        scale: 'prototype' as const,
+        objective: 'automate-production' as const,
+        mode: 'automation' as const
+      }
+    },
+    {
+      name: '🚁 Carbon Drone Frame',
+      desc: 'Lightweight aerospace composite',
+      data: {
+        industry: 'Aerospace & Industrial Robotics',
+        problem: 'Heavy aluminum frame payload reducing drone battery flight time below 20 minutes.',
+        budget: '$2,500 - $8,000 Prototype',
+        materials: '3K Twill Carbon Fiber sheet, CNC Ti-6Al-4V motor mounts, nylon standoffs',
+        scale: 'small-batch' as const,
+        objective: 'new-product' as const,
+        mode: 'product-improvement' as const
+      }
+    },
+    {
+      name: '🩺 Titanium Bone Plate',
+      desc: 'Orthopedic biocompatible implant',
+      data: {
+        industry: 'Biomedical & Surgical Hardware',
+        problem: 'Micro-stress shielding and biocompatibility failure in conventional stainless implants.',
+        budget: '$10,000 - $35,000 Pilot',
+        materials: 'Grade 5 Titanium (Ti-6Al-4V ELI), medical silicone coating',
+        scale: 'prototype' as const,
+        objective: 'improve-quality' as const,
+        mode: 'process-optimization' as const
+      }
+    },
+    {
+      name: '🔋 EV Heat Sink',
+      desc: 'Automotive battery thermal cooler',
+      data: {
+        industry: 'Automotive & CleanTech Storage',
+        problem: 'Uneven battery cell heat dissipation causing thermal runaway risks during fast DC charging.',
+        budget: '$5,000 - $20,000 Batch',
+        materials: '6063-T6 Aluminum extrusion, micro-channel copper heatpipes, thermal paste',
+        scale: 'small-batch' as const,
+        objective: 'save-energy' as const,
+        mode: 'process-optimization' as const
+      }
+    }
+  ];
+
+  const handleApplyPreset = (presetData: IdeaGenerationInput, autoRun = false) => {
+    setForm(presetData);
+    if (autoRun) {
+      handleGenerate(undefined, presetData);
+    }
   };
 
   return (
@@ -134,64 +248,27 @@ export const IdeaGeneratorPage: React.FC<IdeaGeneratorPageProps> = ({
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                Quick Industry Presets
+                1-Click Project Templates ({starterPresets.length})
               </span>
-              <span className="text-[10px] text-slate-500">1-Click Setup</span>
+              <span className="text-[10px] text-emerald-400 font-semibold">Instant Setup</span>
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              <button
-                type="button"
-                onClick={() =>
-                  handleApplyPreset({
-                    industry: 'Eco-Friendly Agriculture & Planters',
-                    problem: 'Single-use plastic pot waste and unutilized rice husk farm residues.',
-                    budget: '$1,000 - $5,000 Pilot',
-                    materials: 'Rice husks, wheat straw, potato starch, soy wax',
-                    scale: 'small-batch',
-                    objective: 'reduce-waste',
-                    mode: 'waste-to-value'
-                  })
-                }
-                className="text-[11px] px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 border border-slate-700 transition-colors"
-              >
-                🌱 Agro-Waste Planter
-              </button>
-
-              <button
-                type="button"
-                onClick={() =>
-                  handleApplyPreset({
-                    industry: 'Consumer Electronics & Lab Equipment',
-                    problem: 'High electromagnetic interference (EMI) and costly tooling for low-volume metal enclosures.',
-                    budget: '$3,000 - $10,000 Batch',
-                    materials: '5052-H32 Aluminum sheet, extruded heatsink, captive M3 fasteners',
-                    scale: 'small-batch',
-                    objective: 'reduce-cost',
-                    mode: 'low-cost'
-                  })
-                }
-                className="text-[11px] px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 border border-slate-700 transition-colors"
-              >
-                ⚡ Sheet Metal Enclosure
-              </button>
-
-              <button
-                type="button"
-                onClick={() =>
-                  handleApplyPreset({
-                    industry: 'Artisanal Food & Skincare Bottling',
-                    problem: 'Inconsistent manual bottle filling causing liquid spills and slow takt times.',
-                    budget: '$800 - $2,500 Machine Rig',
-                    materials: '304 Stainless chassis, silicone Norprene tubing, NEMA stepper motor',
-                    scale: 'prototype',
-                    objective: 'automate-production',
-                    mode: 'automation'
-                  })
-                }
-                className="text-[11px] px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 border border-slate-700 transition-colors"
-              >
-                🤖 Automated Dispenser
-              </button>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+              {starterPresets.map((preset, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => handleApplyPreset(preset.data, false)}
+                  className="text-left p-2 rounded-xl bg-slate-850 hover:bg-slate-800 text-slate-300 border border-slate-750 hover:border-emerald-500/50 transition-all group"
+                  title={`${preset.desc} — Click to load template`}
+                >
+                  <div className="text-[11px] font-bold text-white group-hover:text-emerald-300 truncate">
+                    {preset.name}
+                  </div>
+                  <div className="text-[9px] text-slate-500 line-clamp-1 mt-0.5">
+                    {preset.desc}
+                  </div>
+                </button>
+              ))}
             </div>
           </div>
 
@@ -213,16 +290,44 @@ export const IdeaGeneratorPage: React.FC<IdeaGeneratorPageProps> = ({
 
             {/* 2. Problem to Solve */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Manufacturing Challenge / Problem to Solve
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-semibold text-slate-300">
+                  Manufacturing Challenge / Problem to Solve
+                </label>
+                <button
+                  type="button"
+                  onClick={handleToggleVoiceProblem}
+                  className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-lg border transition-colors ${
+                    isListening
+                      ? 'bg-rose-500/20 text-rose-300 border-rose-500/50 animate-pulse font-bold'
+                      : 'bg-slate-800 text-slate-400 hover:text-white border-slate-700'
+                  }`}
+                  title="Voice dictation (speech-to-text)"
+                >
+                  {isListening ? (
+                    <>
+                      <MicOff className="w-3 h-3 text-rose-400" />
+                      <span>Listening...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Mic className="w-3 h-3 text-emerald-400" />
+                      <span>Voice Dictate</span>
+                    </>
+                  )}
+                </button>
+              </div>
               <textarea
                 value={form.problem}
                 onChange={e => setForm({ ...form, problem: e.target.value })}
                 rows={3}
-                placeholder="Describe the defect, high cost factor, waste material, or performance bottleneck..."
+                placeholder={isListening ? "Listening to your voice... speak now..." : "Describe the defect, high cost factor, waste material, or performance bottleneck..."}
                 required
-                className="w-full px-3 py-2 rounded-xl bg-slate-850 border border-slate-750 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 resize-none"
+                className={`w-full px-3 py-2 rounded-xl bg-slate-850 border text-xs text-white placeholder-slate-500 focus:outline-none resize-none transition-colors ${
+                  isListening
+                    ? 'border-rose-500 ring-2 ring-rose-500/20'
+                    : 'border-slate-750 focus:border-emerald-500'
+                }`}
               />
             </div>
 

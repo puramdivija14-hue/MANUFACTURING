@@ -17,7 +17,9 @@ import {
   Cpu,
   Check,
   RotateCcw,
-  Info
+  Info,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import {
@@ -34,6 +36,7 @@ import {
 import { SAMPLE_PLANS } from '../data/sampleProjects';
 import { storageService } from '../services/storageService';
 import { aiService } from '../services/aiService';
+import { speechService } from '../services/speechService';
 
 interface ManufacturingPlannerPageProps {
   initialPlan?: ManufacturingPlan | null;
@@ -56,6 +59,37 @@ export const ManufacturingPlannerPage: React.FC<ManufacturingPlannerPageProps> =
   // Input for quick AI plan generator from prompt
   const [promptInput, setPromptInput] = useState('');
   const [generating, setGenerating] = useState(false);
+  const [isReadingPlan, setIsReadingPlan] = useState(false);
+
+  useEffect(() => {
+    const unsub = speechService.subscribe(speaking => {
+      if (!speaking) setIsReadingPlan(false);
+    });
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    if (isReadingPlan) {
+      speechService.stop();
+      setIsReadingPlan(false);
+    }
+  }, [activePlan.id]);
+
+  const handleToggleReadPlan = () => {
+    if (isReadingPlan) {
+      speechService.stop();
+      setIsReadingPlan(false);
+    } else {
+      const ops = activePlan.processFlow.map((s, i) => `Step ${i + 1}: ${s.name}, cycle time ${s.cycleTime}`).join('. ');
+      const safety = activePlan.safetyRequirements.map(s => `${s.hazard}: ${s.protocol}`).join('. ');
+      const speechText = `Manufacturing Production Plan for ${activePlan.title}. Target volume is ${activePlan.targetVolume}. Lead time is ${activePlan.leadTime}. Product Overview: ${activePlan.productOverview}. Production Operations: ${ops}. Safety and compliance protocols: ${safety}.`;
+      speechService.speak(speechText, {
+        onStart: () => setIsReadingPlan(true),
+        onEnd: () => setIsReadingPlan(false),
+        onError: () => setIsReadingPlan(false)
+      });
+    }
+  };
 
   useEffect(() => {
     const saved = storageService.getSavedPlans();
@@ -217,6 +251,23 @@ export const ManufacturingPlannerPage: React.FC<ManufacturingPlannerPageProps> =
 
         {/* Global Plan Actions */}
         <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            onClick={handleToggleReadPlan}
+            className={`no-print flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold border transition-colors ${
+              isReadingPlan
+                ? 'bg-emerald-500 text-slate-950 border-emerald-400 animate-pulse font-bold'
+                : 'bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border-slate-700'
+            }`}
+            title={isReadingPlan ? 'Stop Voice Narration' : 'Listen to this Production Plan Aloud'}
+          >
+            {isReadingPlan ? (
+              <VolumeX className="w-4 h-4" />
+            ) : (
+              <Volume2 className="w-4 h-4 text-emerald-400" />
+            )}
+            <span>{isReadingPlan ? 'Stop Audio' : 'Read Plan Aloud'}</span>
+          </button>
+
           <button
             onClick={() => window.print()}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold border border-slate-700 transition-colors shadow-sm"

@@ -4,6 +4,10 @@ import { Footer } from './components/Footer';
 import { SearchModal } from './components/SearchModal';
 import { SettingsModal } from './components/SettingsModal';
 import { EngineeringCopilot } from './components/EngineeringCopilot';
+import { EngineeringCalculatorModal } from './components/EngineeringCalculatorModal';
+import { GuidedTourModal } from './components/GuidedTourModal';
+import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
+import { ComfortToolbar } from './components/ComfortToolbar';
 import { HomePage } from './pages/HomePage';
 import { IdeaGeneratorPage } from './pages/IdeaGeneratorPage';
 import { KnowledgeHubPage } from './pages/KnowledgeHubPage';
@@ -20,6 +24,7 @@ import {
 } from './types';
 import { storageService } from './services/storageService';
 import { aiService } from './services/aiService';
+import { speechService } from './services/speechService';
 
 export function App() {
   const [currentPage, setCurrentPage] = useState<string>('home');
@@ -32,16 +37,60 @@ export function App() {
   const [plannerActivePlan, setPlannerActivePlan] = useState<ManufacturingPlan | null>(null);
   const [knowledgeInitialTopic, setKnowledgeInitialTopic] = useState<string | undefined>();
 
-  // Modals
+  // Modals & Accessibility State
   const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [isCalculatorOpen, setIsCalculatorOpen] = useState<boolean>(false);
+  const [isTourOpen, setIsTourOpen] = useState<boolean>(false);
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState<boolean>(false);
+  const [fontSizeLevel, setFontSizeLevel] = useState<'normal' | 'large' | 'xlarge'>('normal');
 
-  // Global hotkey: Ctrl+K / Cmd+K for search
+  // Global hotkeys: Ctrl+K (search), Ctrl+T (tools), Ctrl+G (tour), Ctrl+/ (shortcuts), Esc (close & stop audio)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        setIsSearchOpen(prev => !prev);
+      // Escape: Stop voice narration & close open modals
+      if (e.key === 'Escape') {
+        speechService.stop();
+        setIsSearchOpen(false);
+        setIsSettingsOpen(false);
+        setIsCalculatorOpen(false);
+        setIsTourOpen(false);
+        setIsShortcutsOpen(false);
+        return;
+      }
+
+      if (e.metaKey || e.ctrlKey) {
+        if (e.key === 'k' || e.key === 'K') {
+          e.preventDefault();
+          setIsSearchOpen(prev => !prev);
+        } else if (e.key === 't' || e.key === 'T') {
+          e.preventDefault();
+          setIsCalculatorOpen(prev => !prev);
+        } else if (e.key === 'g' || e.key === 'G') {
+          e.preventDefault();
+          setIsTourOpen(prev => !prev);
+        } else if (e.key === '/' || e.key === '?') {
+          e.preventDefault();
+          setIsShortcutsOpen(prev => !prev);
+        } else if (e.key === '1') {
+          e.preventDefault();
+          setCurrentPage('home');
+        } else if (e.key === '2') {
+          e.preventDefault();
+          setCurrentPage('generator');
+        } else if (e.key === '3') {
+          e.preventDefault();
+          setCurrentPage('knowledge');
+        } else if (e.key === '4') {
+          e.preventDefault();
+          setCurrentPage('planner');
+        } else if (e.key === '5') {
+          e.preventDefault();
+          setCurrentPage('explorer');
+        } else if (e.key === '6') {
+          e.preventDefault();
+          setCurrentPage('sustainability');
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -109,7 +158,12 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100 selection:bg-emerald-500/30 selection:text-emerald-300">
+    <div
+      style={{
+        fontSize: fontSizeLevel === 'large' ? '106%' : fontSizeLevel === 'xlarge' ? '114%' : '100%'
+      }}
+      className="min-h-screen flex flex-col bg-slate-950 text-slate-100 selection:bg-emerald-500/30 selection:text-emerald-300 transition-all duration-150"
+    >
       {/* Top Navigation */}
       <Navbar
         currentPage={currentPage}
@@ -118,6 +172,8 @@ export function App() {
         settings={settings}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenSearch={() => setIsSearchOpen(true)}
+        onOpenCalculator={() => setIsCalculatorOpen(true)}
+        onOpenTour={() => setIsTourOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -214,6 +270,15 @@ export function App() {
         }}
       />
 
+      {/* Accessibility & Comfort Toolbar */}
+      <ComfortToolbar
+        onOpenCalculator={() => setIsCalculatorOpen(true)}
+        onOpenTour={() => setIsTourOpen(true)}
+        onOpenShortcuts={() => setIsShortcutsOpen(true)}
+        fontSizeLevel={fontSizeLevel}
+        onChangeFontSize={setLevel => setFontSizeLevel(setLevel)}
+      />
+
       {/* Global Footer */}
       <Footer onNavigate={handleNavigate} />
 
@@ -222,6 +287,25 @@ export function App() {
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
         onSelectResult={handleSearchResultSelect}
+      />
+
+      {/* Engineering Tools & Machining Calculators */}
+      <EngineeringCalculatorModal
+        isOpen={isCalculatorOpen}
+        onClose={() => setIsCalculatorOpen(false)}
+      />
+
+      {/* Guided Onboarding & Platform Tour Modal */}
+      <GuidedTourModal
+        isOpen={isTourOpen}
+        onClose={() => setIsTourOpen(false)}
+        onNavigateToPage={handleNavigate}
+      />
+
+      {/* Keyboard Shortcuts Help Modal */}
+      <KeyboardShortcutsModal
+        isOpen={isShortcutsOpen}
+        onClose={() => setIsShortcutsOpen(false)}
       />
 
       {/* Global Settings & AI Modal */}

@@ -12,7 +12,9 @@ import {
   Minimize2,
   Copy,
   Check,
-  ChevronDown
+  ChevronDown,
+  Mic,
+  MicOff
 } from 'lucide-react';
 import { ChatMessage, UserSettings } from '../types';
 import { aiService } from '../services/aiService';
@@ -35,6 +37,38 @@ export const EngineeringCopilot: React.FC<EngineeringCopilotProps> = ({
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [isListening, setIsListening] = useState(false);
+
+  const handleToggleVoiceInput = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Speech recognition is not supported in this browser. Please try Chrome, Edge, or Safari.");
+      return;
+    }
+    if (isListening) {
+      setIsListening(false);
+      return;
+    }
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      recognition.onstart = () => setIsListening(true);
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        if (transcript) {
+          setInput(prev => (prev ? `${prev} ${transcript}` : transcript));
+        }
+        setIsListening(false);
+      };
+      recognition.onerror = () => setIsListening(false);
+      recognition.onend = () => setIsListening(false);
+      recognition.start();
+    } catch {
+      setIsListening(false);
+    }
+  };
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -342,13 +376,32 @@ Ask me anything about:
             }}
             className="p-3 bg-slate-850 border-t border-slate-750 flex items-center gap-2"
           >
-            <input
-              type="text"
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              placeholder="Ask an engineering question..."
-              className="flex-1 bg-slate-900 border border-slate-750 text-xs text-white placeholder-slate-500 px-3 py-2 rounded-xl focus:outline-none focus:border-emerald-500"
-            />
+            <div className="relative flex-1 flex items-center">
+              <input
+                type="text"
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                placeholder={isListening ? "Listening... speak now..." : "Ask an engineering question..."}
+                className={`w-full bg-slate-900 border text-xs text-white placeholder-slate-500 pl-3 pr-9 py-2 rounded-xl focus:outline-none transition-colors ${
+                  isListening
+                    ? 'border-rose-500 ring-2 ring-rose-500/30'
+                    : 'border-slate-750 focus:border-emerald-500'
+                }`}
+              />
+              <button
+                type="button"
+                onClick={handleToggleVoiceInput}
+                className={`absolute right-2 p-1 rounded-lg transition-colors ${
+                  isListening
+                    ? 'text-rose-400 bg-rose-500/20 animate-pulse'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                }`}
+                title={isListening ? 'Stop listening' : 'Voice Input (Speech-to-Text)'}
+              >
+                {isListening ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+
             <button
               type="submit"
               disabled={!input.trim() || loading}
