@@ -19,6 +19,7 @@ import { SavedProjectsPage } from './pages/SavedProjectsPage';
 import { DFMAnalyzerPage } from './pages/DFMAnalyzerPage';
 import { ProductionSimulatorPage } from './pages/ProductionSimulatorPage';
 import { RFQEstimatorPage } from './pages/RFQEstimatorPage';
+import { BlueprintDrawingPage } from './pages/BlueprintDrawingPage';
 import {
   GeneratedIdea,
   ManufacturingPlan,
@@ -102,6 +103,9 @@ export function App() {
         } else if (e.key === '9') {
           e.preventDefault();
           setCurrentPage('rfq');
+        } else if (e.key === '0') {
+          e.preventDefault();
+          setCurrentPage('blueprint');
         }
       }
     };
@@ -263,6 +267,8 @@ export function App() {
         {currentPage === 'simulator' && <ProductionSimulatorPage />}
 
         {currentPage === 'rfq' && <RFQEstimatorPage />}
+
+        {currentPage === 'blueprint' && <BlueprintDrawingPage />}
 
         {currentPage === 'saved' && (
           <SavedProjectsPage

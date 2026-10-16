@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, BookOpen, Layers, Cpu, ArrowRight, ShieldCheck, Activity, Globe } from 'lucide-react';
+import { Search, X, BookOpen, Layers, Cpu, ArrowRight, ShieldCheck, Activity, Globe, Compass } from 'lucide-react';
 import { KNOWLEDGE_TOPICS } from '../data/knowledgeTopics';
 import { MATERIALS_DATA } from '../data/materialsData';
 import { MACHINES_DATA } from '../data/machinesData';
@@ -67,6 +67,14 @@ export const SearchModal: React.FC<SearchModalProps> = ({
       icon: Globe,
       desc: 'Calculate domestic vs offshore landed costs, tooling break-even volumes, and generate formal RFQ packages.',
       keywords: ['rfq', 'quote', 'supplier', 'sourcing', 'offshore', 'domestic', 'tariff', 'freight', 'vendor', 'landed', 'breakeven']
+    },
+    {
+      id: 'blueprint',
+      title: '2D CAD Blueprint & GD&T Studio',
+      tag: 'Engineering Drafting & Fits',
+      icon: Compass,
+      desc: 'Render ISO 128 technical drawings with cross-hatch sections, PCD bolt circles, GD&T feature control frames, and ISO 286 tolerance limits.',
+      keywords: ['blueprint', 'cad', 'drawing', 'gdt', 'gd&t', 'tolerance', 'fits', 'iso 286', 'pcd', 'section', 'hatch', 'flange', 'datum']
     }
   ];
 

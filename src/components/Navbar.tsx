@@ -17,7 +17,8 @@ import {
   HelpCircle,
   ShieldCheck,
   Activity,
-  Globe
+  Globe,
+  Compass
 } from 'lucide-react';
 import { UserSettings } from '../types';
 
@@ -52,6 +53,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'dfm', label: 'DFM Analyzer', icon: ShieldCheck, badge: 'New' },
     { id: 'simulator', label: 'Plant OEE', icon: Activity, badge: 'New' },
     { id: 'rfq', label: 'Supplier RFQ', icon: Globe, badge: 'New' },
+    { id: 'blueprint', label: 'CAD Blueprint', icon: Compass, badge: 'New' },
     { id: 'explorer', label: 'Materials & Machines', icon: Layers },
     { id: 'sustainability', label: 'Sustainability', icon: Leaf },
     { id: 'prototyping', label: 'Prototype Guide', icon: Wrench },

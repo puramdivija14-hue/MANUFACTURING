@@ -16,7 +16,8 @@ import {
   Zap,
   Box,
   Activity,
-  Globe
+  Globe,
+  Compass
 } from 'lucide-react';
 import { SAMPLE_CHALLENGES } from '../data/sampleProjects';
 import { ManufacturingPlan, GeneratedIdea } from '../types';
@@ -232,10 +233,10 @@ export const HomePage: React.FC<HomePageProps> = ({
               </span>
               <h3 className="text-lg font-bold text-white">Engineering Decision Engines</h3>
             </div>
-            <span className="text-xs text-slate-500 font-mono hidden sm:inline">Ctrl + 7 / 8 / 9</span>
+            <span className="text-xs text-slate-500 font-mono hidden sm:inline">Ctrl + 7 / 8 / 9 / 0</span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Studio 1: DFM Analyzer */}
             <div
               onClick={() => onNavigate('dfm')}
@@ -253,7 +254,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                 DFM Analyzer & Defect Predictor
               </h4>
               <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
-                Check geometry rules across CNC, Molding, Sheet Metal & 3D printing. Catch sink marks and tool chatter before cutting steel.
+                Check geometry rules across CNC, Molding, Sheet Metal & 3D printing. Catch sink marks and tool chatter.
               </p>
               <div className="mt-3 flex items-center gap-1 text-xs font-semibold text-cyan-400">
                 <span>Run DFM Audit</span>
@@ -307,6 +308,31 @@ export const HomePage: React.FC<HomePageProps> = ({
               </p>
               <div className="mt-3 flex items-center gap-1 text-xs font-semibold text-blue-400">
                 <span>Compare Sourcing</span>
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+
+            {/* Studio 4: 2D CAD Blueprint & GD&T Viewer */}
+            <div
+              onClick={() => onNavigate('blueprint')}
+              className="p-5 rounded-2xl bg-gradient-to-b from-amber-950/20 to-slate-900/60 border border-slate-800 hover:border-amber-500/50 cursor-pointer transition-all hover:-translate-y-1 group"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 group-hover:bg-amber-500/25 transition-colors">
+                  <Compass className="w-5 h-5" />
+                </div>
+                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                  2D CAD & GD&T
+                </span>
+              </div>
+              <h4 className="text-sm font-bold text-white group-hover:text-amber-300 transition-colors">
+                Technical Blueprint & Fits
+              </h4>
+              <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+                Render ISO 128 engineering blueprints with cross-hatch section views, PCD bolt patterns, GD&T frames, and ISO 286 tolerance limits.
+              </p>
+              <div className="mt-3 flex items-center gap-1 text-xs font-semibold text-amber-400">
+                <span>Open CAD Blueprint</span>
                 <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
               </div>
             </div>
