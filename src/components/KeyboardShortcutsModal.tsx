@@ -38,7 +38,10 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
         { keys: ['Ctrl', '3'], desc: 'Jump to Knowledge Hub' },
         { keys: ['Ctrl', '4'], desc: 'Jump to Manufacturing Planner' },
         { keys: ['Ctrl', '5'], desc: 'Jump to Materials & Machines Explorer' },
-        { keys: ['Ctrl', '6'], desc: 'Jump to Sustainability & Scrap Calculator' }
+        { keys: ['Ctrl', '6'], desc: 'Jump to Sustainability & Scrap Calculator' },
+        { keys: ['Ctrl', '7'], desc: 'Jump to DFM Analyzer & Defect Predictor' },
+        { keys: ['Ctrl', '8'], desc: 'Jump to Plant OEE & Shift Simulator' },
+        { keys: ['Ctrl', '9'], desc: 'Jump to Supplier RFQ & Sourcing Estimator' }
       ]
     }
   ];

@@ -14,7 +14,9 @@ import {
   Search,
   Factory,
   Zap,
-  Box
+  Box,
+  Activity,
+  Globe
 } from 'lucide-react';
 import { SAMPLE_CHALLENGES } from '../data/sampleProjects';
 import { ManufacturingPlan, GeneratedIdea } from '../types';
@@ -217,6 +219,96 @@ export const HomePage: React.FC<HomePageProps> = ({
             <div className="mt-4 flex items-center text-xs font-semibold text-emerald-400 gap-1">
               <span>Analyze Scrap & Yield</span>
               <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </div>
+        </div>
+
+        {/* Specialized Production & Engineering Studios */}
+        <div className="mt-8 pt-8 border-t border-slate-850">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-cyan-400">
+                Advanced Production Studios
+              </span>
+              <h3 className="text-lg font-bold text-white">Engineering Decision Engines</h3>
+            </div>
+            <span className="text-xs text-slate-500 font-mono hidden sm:inline">Ctrl + 7 / 8 / 9</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Studio 1: DFM Analyzer */}
+            <div
+              onClick={() => onNavigate('dfm')}
+              className="p-5 rounded-2xl bg-gradient-to-b from-cyan-950/20 to-slate-900/60 border border-slate-800 hover:border-cyan-500/50 cursor-pointer transition-all hover:-translate-y-1 group"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-10 h-10 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400 group-hover:bg-cyan-500/25 transition-colors">
+                  <ShieldCheck className="w-5 h-5" />
+                </div>
+                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                  Rule Checker
+                </span>
+              </div>
+              <h4 className="text-sm font-bold text-white group-hover:text-cyan-300 transition-colors">
+                DFM Analyzer & Defect Predictor
+              </h4>
+              <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+                Check geometry rules across CNC, Molding, Sheet Metal & 3D printing. Catch sink marks and tool chatter before cutting steel.
+              </p>
+              <div className="mt-3 flex items-center gap-1 text-xs font-semibold text-cyan-400">
+                <span>Run DFM Audit</span>
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+
+            {/* Studio 2: Plant OEE Simulator */}
+            <div
+              onClick={() => onNavigate('simulator')}
+              className="p-5 rounded-2xl bg-gradient-to-b from-emerald-950/20 to-slate-900/60 border border-slate-800 hover:border-emerald-500/50 cursor-pointer transition-all hover:-translate-y-1 group"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:bg-emerald-500/25 transition-colors">
+                  <Activity className="w-5 h-5" />
+                </div>
+                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                  Digital Twin
+                </span>
+              </div>
+              <h4 className="text-sm font-bold text-white group-hover:text-emerald-300 transition-colors">
+                Plant OEE & Shift Simulator
+              </h4>
+              <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+                Simulate shop floor shift throughput, calculate Availability × Performance × Quality, and identify line bottlenecks.
+              </p>
+              <div className="mt-3 flex items-center gap-1 text-xs font-semibold text-emerald-400">
+                <span>Simulate Shift</span>
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+
+            {/* Studio 3: Supplier RFQ Estimator */}
+            <div
+              onClick={() => onNavigate('rfq')}
+              className="p-5 rounded-2xl bg-gradient-to-b from-blue-950/20 to-slate-900/60 border border-slate-800 hover:border-blue-500/50 cursor-pointer transition-all hover:-translate-y-1 group"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 group-hover:bg-blue-500/25 transition-colors">
+                  <Globe className="w-5 h-5" />
+                </div>
+                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/40">
+                  Sourcing
+                </span>
+              </div>
+              <h4 className="text-sm font-bold text-white group-hover:text-blue-300 transition-colors">
+                Supplier RFQ & Sourcing Estimator
+              </h4>
+              <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+                Compare Domestic vs Offshore landed unit costs, find tooling break-even volumes, and generate formal RFQ packages.
+              </p>
+              <div className="mt-3 flex items-center gap-1 text-xs font-semibold text-blue-400">
+                <span>Compare Sourcing</span>
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              </div>
             </div>
           </div>
         </div>

@@ -16,6 +16,9 @@ import { MaterialMachinePage } from './pages/MaterialMachinePage';
 import { SustainabilityPage } from './pages/SustainabilityPage';
 import { PrototypeGuidePage } from './pages/PrototypeGuidePage';
 import { SavedProjectsPage } from './pages/SavedProjectsPage';
+import { DFMAnalyzerPage } from './pages/DFMAnalyzerPage';
+import { ProductionSimulatorPage } from './pages/ProductionSimulatorPage';
+import { RFQEstimatorPage } from './pages/RFQEstimatorPage';
 import {
   GeneratedIdea,
   ManufacturingPlan,
@@ -90,6 +93,15 @@ export function App() {
         } else if (e.key === '6') {
           e.preventDefault();
           setCurrentPage('sustainability');
+        } else if (e.key === '7') {
+          e.preventDefault();
+          setCurrentPage('dfm');
+        } else if (e.key === '8') {
+          e.preventDefault();
+          setCurrentPage('simulator');
+        } else if (e.key === '9') {
+          e.preventDefault();
+          setCurrentPage('rfq');
         }
       }
     };
@@ -148,10 +160,12 @@ export function App() {
     refreshStorage();
   };
 
-  const handleSearchResultSelect = (category: 'knowledge' | 'material' | 'machine', id: string) => {
+  const handleSearchResultSelect = (category: 'knowledge' | 'material' | 'machine' | 'tool', id: string) => {
     if (category === 'knowledge') {
       setKnowledgeInitialTopic(id);
       setCurrentPage('knowledge');
+    } else if (category === 'tool') {
+      setCurrentPage(id);
     } else {
       setCurrentPage('explorer');
     }
@@ -227,6 +241,28 @@ export function App() {
         {currentPage === 'sustainability' && <SustainabilityPage />}
 
         {currentPage === 'prototyping' && <PrototypeGuidePage />}
+
+        {currentPage === 'dfm' && (
+          <DFMAnalyzerPage
+            onSendToPlanner={(dfmData) => {
+              const plan = aiService.synthesizePlan({
+                title: dfmData.title,
+                proposedSolution: `Engineered production plan for ${dfmData.title} with verified DFM rules (score ${dfmData.score}/100)`,
+                materials: ['Standard Production Feedstock'],
+                manufacturingMethod: dfmData.process
+              });
+              setPlannerActivePlan(plan);
+              storageService.savePlan(plan);
+              refreshStorage();
+              setCurrentPage('planner');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          />
+        )}
+
+        {currentPage === 'simulator' && <ProductionSimulatorPage />}
+
+        {currentPage === 'rfq' && <RFQEstimatorPage />}
 
         {currentPage === 'saved' && (
           <SavedProjectsPage

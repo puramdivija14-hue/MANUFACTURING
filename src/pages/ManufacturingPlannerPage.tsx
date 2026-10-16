@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   ClipboardList,
   Sparkles,
@@ -7,6 +7,10 @@ import {
   Save,
   Printer,
   Download,
+  Upload,
+  FileSpreadsheet,
+  GitBranch,
+  Calendar,
   AlertTriangle,
   CheckCircle2,
   Clock,
@@ -19,7 +23,9 @@ import {
   RotateCcw,
   Info,
   Volume2,
-  VolumeX
+  VolumeX,
+  ArrowRight,
+  Zap
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import {
@@ -53,13 +59,20 @@ export const ManufacturingPlannerPage: React.FC<ManufacturingPlannerPageProps> =
   );
   const [savedStatus, setSavedStatus] = useState(false);
   const [activeTab, setActiveTab] = useState<
-    'bom' | 'flow' | 'machines' | 'quality' | 'safety' | 'testing' | 'costs'
+    'bom' | 'flow' | 'flowchart' | 'timeline' | 'machines' | 'quality' | 'safety' | 'waste' | 'testing' | 'costs'
   >('bom');
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [newMilestonePhase, setNewMilestonePhase] = useState('');
+  const [newMilestoneDuration, setNewMilestoneDuration] = useState('');
+  const [newMilestoneDeliverable, setNewMilestoneDeliverable] = useState('');
+  const [newWasteItem, setNewWasteItem] = useState('');
 
   // Input for quick AI plan generator from prompt
   const [promptInput, setPromptInput] = useState('');
   const [generating, setGenerating] = useState(false);
   const [isReadingPlan, setIsReadingPlan] = useState(false);
+
 
   useEffect(() => {
     const unsub = speechService.subscribe(speaking => {
@@ -148,7 +161,133 @@ export const ManufacturingPlannerPage: React.FC<ManufacturingPlannerPageProps> =
     }
   };
 
+  // Helper to parse cycle times into seconds for line bottleneck analysis
+  const parseCycleTimeSeconds = (timeStr: string): number => {
+    if (!timeStr) return 60;
+    const lower = timeStr.toLowerCase();
+    const num = parseFloat(lower.replace(/[^0-9.]/g, '')) || 1;
+    if (lower.includes('hr') || lower.includes('hour')) return num * 3600;
+    if (lower.includes('min')) return num * 60;
+    if (lower.includes('sec') || lower.includes('s')) return num;
+    return num * 60;
+  };
+
+  const bottleneckStep = activePlan.processFlow.length > 0
+    ? activePlan.processFlow.reduce((max, step) => {
+        const sec = parseCycleTimeSeconds(step.cycleTime);
+        const maxSec = parseCycleTimeSeconds(max.cycleTime);
+        return sec > maxSec ? step : max;
+      }, activePlan.processFlow[0])
+    : null;
+
+  const bottleneckSec = bottleneckStep ? parseCycleTimeSeconds(bottleneckStep.cycleTime) : 60;
+  const factoryMaxThroughputPerHour = Math.round(3600 / Math.max(1, bottleneckSec));
+
+  // Export JSON Blueprint
+  const handleExportJSON = () => {
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(activePlan, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute('href', dataStr);
+    downloadAnchor.setAttribute('download', `${activePlan.title.toLowerCase().replace(/[^a-z0-9]/g, '_')}_blueprint.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
+  // Export BOM to CSV
+  const handleExportBOMCSV = () => {
+    const headers = ['Item', 'Material', 'Quantity', 'Unit', 'Unit Cost ($)', 'Subtotal ($)', 'Supplier Category', 'Notes'];
+    const rows = activePlan.bom.map(b => [
+      `"${b.item.replace(/"/g, '""')}"`,
+      `"${b.material.replace(/"/g, '""')}"`,
+      b.quantity,
+      `"${b.unit.replace(/"/g, '""')}"`,
+      b.unitCost.toFixed(2),
+      ((Number(b.quantity) || 0) * (Number(b.unitCost) || 0)).toFixed(2),
+      `"${b.supplierCategory.replace(/"/g, '""')}"`,
+      `"${(b.notes || '').replace(/"/g, '""')}"`
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute('href', encodedUri);
+    downloadAnchor.setAttribute('download', `${activePlan.title.toLowerCase().replace(/[^a-z0-9]/g, '_')}_BOM.csv`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
+  // Import JSON Blueprint
+  const handleImportJSON = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const parsed = JSON.parse(event.target?.result as string);
+        if (parsed && parsed.title && parsed.bom && parsed.processFlow) {
+          if (!parsed.id) parsed.id = `imported-${Date.now()}`;
+          setActivePlan(parsed);
+          storageService.savePlan(parsed);
+          setPlansList(storageService.getSavedPlans());
+          if (onPlanSaved) onPlanSaved(parsed);
+          alert(`Successfully loaded blueprint "${parsed.title}"!`);
+        } else {
+          alert('Invalid blueprint format. Please ensure the JSON contains BOM and process flow.');
+        }
+      } catch (err) {
+        alert('Error parsing JSON blueprint file.');
+      }
+    };
+    reader.readAsText(file);
+    if (e.target) e.target.value = '';
+  };
+
+  // Milestone Handlers
+  const handleAddMilestone = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMilestonePhase.trim()) return;
+    const newM: TimelineMilestone = {
+      phase: newMilestonePhase.trim(),
+      duration: newMilestoneDuration.trim() || '2 Weeks',
+      deliverable: newMilestoneDeliverable.trim() || 'Phase Complete Sign-off'
+    };
+    setActivePlan({
+      ...activePlan,
+      timeline: [...activePlan.timeline, newM]
+    });
+    setNewMilestonePhase('');
+    setNewMilestoneDuration('');
+    setNewMilestoneDeliverable('');
+  };
+
+  const handleDeleteMilestone = (index: number) => {
+    setActivePlan({
+      ...activePlan,
+      timeline: activePlan.timeline.filter((_, i) => i !== index)
+    });
+  };
+
+  // Waste Reduction Strategy Handlers
+  const handleAddWasteStrategy = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newWasteItem.trim()) return;
+    setActivePlan({
+      ...activePlan,
+      wasteManagement: [...(activePlan.wasteManagement || []), newWasteItem.trim()]
+    });
+    setNewWasteItem('');
+  };
+
+  const handleDeleteWasteStrategy = (index: number) => {
+    setActivePlan({
+      ...activePlan,
+      wasteManagement: (activePlan.wasteManagement || []).filter((_, i) => i !== index)
+    });
+  };
+
   // BOM Handlers
+
   const handleAddBOMItem = () => {
     const newItem: BOMItem = {
       id: `bom-${Date.now()}`,
@@ -250,10 +389,18 @@ export const ManufacturingPlannerPage: React.FC<ManufacturingPlannerPageProps> =
         </div>
 
         {/* Global Plan Actions */}
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleImportJSON}
+            accept=".json"
+            className="hidden"
+          />
+
           <button
             onClick={handleToggleReadPlan}
-            className={`no-print flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold border transition-colors ${
+            className={`no-print flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-colors ${
               isReadingPlan
                 ? 'bg-emerald-500 text-slate-950 border-emerald-400 animate-pulse font-bold'
                 : 'bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border-slate-700'
@@ -265,16 +412,43 @@ export const ManufacturingPlannerPage: React.FC<ManufacturingPlannerPageProps> =
             ) : (
               <Volume2 className="w-4 h-4 text-emerald-400" />
             )}
-            <span>{isReadingPlan ? 'Stop Audio' : 'Read Plan Aloud'}</span>
+            <span>{isReadingPlan ? 'Stop Audio' : 'Read Aloud'}</span>
           </button>
 
           <button
             onClick={() => window.print()}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold border border-slate-700 transition-colors shadow-sm"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold border border-slate-700 transition-colors shadow-sm"
             title="Export clean printable PDF engineering report"
           >
             <Printer className="w-4 h-4 text-slate-400" />
-            <span>Export Printable Report</span>
+            <span className="hidden sm:inline">Print Report</span>
+          </button>
+
+          <button
+            onClick={handleExportBOMCSV}
+            className="no-print flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold border border-slate-700 transition-colors shadow-sm"
+            title="Export Bill of Materials as CSV spreadsheet"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+            <span>Export CSV</span>
+          </button>
+
+          <button
+            onClick={handleExportJSON}
+            className="no-print flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold border border-slate-700 transition-colors shadow-sm"
+            title="Export full plan as JSON blueprint"
+          >
+            <Download className="w-4 h-4 text-teal-400" />
+            <span>Export JSON</span>
+          </button>
+
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="no-print flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold border border-slate-700 transition-colors shadow-sm"
+            title="Import an existing plan JSON file"
+          >
+            <Upload className="w-4 h-4 text-blue-400" />
+            <span>Import</span>
           </button>
 
           <button
@@ -284,12 +458,12 @@ export const ManufacturingPlannerPage: React.FC<ManufacturingPlannerPageProps> =
             {savedStatus ? (
               <>
                 <Check className="w-4 h-4" />
-                <span>Saved to Projects!</span>
+                <span>Saved!</span>
               </>
             ) : (
               <>
                 <Save className="w-4 h-4" />
-                <span>Save Production Plan</span>
+                <span>Save Plan</span>
               </>
             )}
           </button>
@@ -439,10 +613,13 @@ export const ManufacturingPlannerPage: React.FC<ManufacturingPlannerPageProps> =
       <div className="no-print flex items-center space-x-2 border-b border-slate-800 overflow-x-auto pb-1">
         {[
           { id: 'bom', label: `Bill of Materials (${activePlan.bom.length})`, icon: Layers },
-          { id: 'flow', label: `Operations Flow (${activePlan.processFlow.length})`, icon: Clock },
+          { id: 'flow', label: `Operations Table (${activePlan.processFlow.length})`, icon: Clock },
+          { id: 'flowchart', label: 'Factory Flow Visualizer', icon: GitBranch, badge: 'Pipeline' },
+          { id: 'timeline', label: `Gantt Schedule (${activePlan.timeline.length})`, icon: Calendar },
           { id: 'machines', label: `Machines & Tooling (${activePlan.machines.length})`, icon: Cpu },
           { id: 'quality', label: `Quality Checkpoints (${activePlan.qualityCheckpoints.length})`, icon: CheckCircle2 },
           { id: 'safety', label: `Safety & OSHA (${activePlan.safetyRequirements.length})`, icon: ShieldAlert },
+          { id: 'waste', label: `Waste & Circular (${(activePlan.wasteManagement || []).length})`, icon: Leaf },
           { id: 'testing', label: `Prototype Tests (${activePlan.prototypeTesting.length})`, icon: ClipboardList },
           { id: 'costs', label: 'Budget & Cost Breakdown', icon: DollarSign }
         ].map(tab => {
@@ -452,7 +629,7 @@ export const ManufacturingPlannerPage: React.FC<ManufacturingPlannerPageProps> =
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-t-xl transition-all whitespace-nowrap border-b-2 ${
+              className={`flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-semibold rounded-t-xl transition-all whitespace-nowrap border-b-2 ${
                 isActive
                   ? 'bg-slate-900 text-teal-400 border-teal-500 shadow-sm'
                   : 'text-slate-400 hover:text-white border-transparent'
@@ -460,13 +637,18 @@ export const ManufacturingPlannerPage: React.FC<ManufacturingPlannerPageProps> =
             >
               <Icon className="w-3.5 h-3.5" />
               <span>{tab.label}</span>
+              {tab.badge && (
+                <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-teal-500/20 text-teal-300 uppercase">
+                  {tab.badge}
+                </span>
+              )}
             </button>
           );
         })}
       </div>
 
       {/* Tab 1: Bill of Materials (BOM) */}
-      {(activeTab === 'bom' || true) && (
+      {activeTab === 'bom' && (
         <div className={`space-y-4 ${activeTab !== 'bom' ? 'print-only' : ''}`}>
           <div className="flex items-center justify-between">
             <h3 className="text-base font-bold text-white flex items-center gap-2">
@@ -680,6 +862,230 @@ export const ManufacturingPlannerPage: React.FC<ManufacturingPlannerPageProps> =
         </div>
       )}
 
+      {/* Tab: Factory Flow Visualizer (Node Pipeline) */}
+      {(activeTab === 'flowchart' || false) && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <GitBranch className="w-4 h-4 text-teal-400" />
+                <span>Interactive Factory Flow & Routing Pipeline</span>
+              </h3>
+              <p className="text-xs text-slate-400 mt-1">
+                Visual sequential map of production steps, tool work centers, and quality control gates.
+              </p>
+            </div>
+
+            {bottleneckStep && (
+              <div className="p-3 rounded-xl bg-amber-950/20 border border-amber-500/40 flex items-center gap-3">
+                <Zap className="w-4 h-4 text-amber-400 shrink-0" />
+                <div className="text-xs">
+                  <span className="text-amber-300 font-bold block">
+                    Line Bottleneck: Step {bottleneckStep.stepNumber} ({bottleneckStep.name})
+                  </span>
+                  <span className="text-slate-400 font-mono text-[11px]">
+                    Cycle: {bottleneckStep.cycleTime} • Max Throughput: ~{factoryMaxThroughputPerHour} units/hr
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Visual Node Flowchart */}
+          <div className="space-y-4">
+            {activePlan.processFlow.map((step, idx) => {
+              const isBottleneck = bottleneckStep?.id === step.id;
+              const isLast = idx === activePlan.processFlow.length - 1;
+
+              return (
+                <div key={step.id} className="relative">
+                  <div
+                    className={`p-5 rounded-2xl border transition-all ${
+                      isBottleneck
+                        ? 'bg-slate-900 border-amber-500/50 shadow-lg shadow-amber-500/5'
+                        : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'
+                    }`}
+                  >
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                      {/* Left: Step Info */}
+                      <div className="flex items-start sm:items-center gap-3">
+                        <div
+                          className={`w-9 h-9 rounded-xl font-mono font-black flex items-center justify-center text-sm shrink-0 border ${
+                            isBottleneck
+                              ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md shadow-amber-500/20'
+                              : 'bg-teal-500/15 text-teal-300 border-teal-500/30'
+                          }`}
+                        >
+                          {step.stepNumber}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-sm font-bold text-white">{step.name}</h4>
+                            {isBottleneck && (
+                              <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                                Line Constraint
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-slate-400">
+                            <span className="flex items-center gap-1 font-semibold text-slate-300">
+                              <Cpu className="w-3.5 h-3.5 text-blue-400" />
+                              {step.machineOrTool}
+                            </span>
+                            <span>•</span>
+                            <span>Params: {step.parameters}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right: Cycle Time & Quality Gate */}
+                      <div className="flex flex-wrap items-center gap-3 self-start lg:self-auto shrink-0">
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-950/80 border border-slate-750 font-mono text-xs">
+                          <Clock className="w-3.5 h-3.5 text-teal-400" />
+                          <span className="font-bold text-white">{step.cycleTime}</span>
+                        </div>
+
+                        {step.qualityCheck && (
+                          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span className="max-w-[200px] truncate" title={step.qualityCheck}>
+                              QA: {step.qualityCheck}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {step.safetyNotes && (
+                      <div className="mt-3 pt-3 border-t border-slate-850 flex items-center gap-2 text-[11px] text-amber-300/90">
+                        <ShieldAlert className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                        <span>Safety Requirement: {step.safetyNotes}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Flow Arrow to next node */}
+                  {!isLast && (
+                    <div className="flex justify-center my-2">
+                      <div className="flex items-center gap-1.5 text-slate-600">
+                        <div className="w-0.5 h-4 bg-gradient-to-b from-teal-500/50 to-slate-700" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Tab: Gantt Schedule & Timeline */}
+      {(activeTab === 'timeline' || false) && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-teal-400" />
+                <span>Gantt Project Schedule & Milestones</span>
+              </h3>
+              <p className="text-xs text-slate-400 mt-1">
+                Visual timeline spanning design freeze, prototype fabrication, tooling NRE, and ramp-up.
+              </p>
+            </div>
+            <div className="px-3.5 py-1.5 rounded-xl bg-slate-900 border border-slate-800 font-mono text-xs text-teal-300">
+              Total Lead Time: {activePlan.leadTime}
+            </div>
+          </div>
+
+          {/* Interactive Gantt Bar Visualization */}
+          <div className="bg-slate-900/90 rounded-2xl border border-slate-800 p-5 space-y-4">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              Visual Phase Progression
+            </h4>
+
+            <div className="space-y-3">
+              {activePlan.timeline.map((mile, idx) => {
+                const colors = [
+                  'from-emerald-500 to-teal-600',
+                  'from-teal-500 to-cyan-600',
+                  'from-cyan-500 to-blue-600',
+                  'from-blue-500 to-indigo-600',
+                  'from-indigo-500 to-purple-600'
+                ];
+                const grad = colors[idx % colors.length];
+
+                return (
+                  <div key={idx} className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-850 space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-slate-800 text-teal-400 font-bold flex items-center justify-center text-[10px] font-mono">
+                          {idx + 1}
+                        </span>
+                        <span className="font-bold text-white">{mile.phase}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="font-mono text-slate-400 font-semibold">{mile.duration}</span>
+                        <button
+                          onClick={() => handleDeleteMilestone(idx)}
+                          className="no-print text-slate-600 hover:text-rose-400 p-1"
+                          title="Remove milestone"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <p className="text-[11px] text-slate-400">
+                      Deliverable: <strong className="text-slate-300">{mile.deliverable}</strong>
+                    </p>
+
+                    {/* Gantt Bar */}
+                    <div className="h-2 w-full bg-slate-900 rounded-full overflow-hidden">
+                      <div
+                        style={{ width: `${Math.min(100, 25 + idx * 22)}%` }}
+                        className={`h-full bg-gradient-to-r ${grad} rounded-full transition-all`}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Add Milestone Form */}
+            <form onSubmit={handleAddMilestone} className="no-print pt-3 border-t border-slate-850 flex flex-col sm:flex-row items-center gap-2">
+              <input
+                type="text"
+                placeholder="New Phase Name (e.g. Mold T1 Trials)"
+                value={newMilestonePhase}
+                onChange={e => setNewMilestonePhase(e.target.value)}
+                className="flex-1 px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-teal-500"
+              />
+              <input
+                type="text"
+                placeholder="Duration (e.g. 2 Weeks)"
+                value={newMilestoneDuration}
+                onChange={e => setNewMilestoneDuration(e.target.value)}
+                className="w-32 px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-teal-500 font-mono"
+              />
+              <input
+                type="text"
+                placeholder="Deliverable (e.g. First 50 samples)"
+                value={newMilestoneDeliverable}
+                onChange={e => setNewMilestoneDeliverable(e.target.value)}
+                className="flex-1 px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-teal-500"
+              />
+              <button
+                type="submit"
+                className="flex items-center gap-1 px-3.5 py-1.5 rounded-lg bg-teal-500 hover:bg-teal-400 text-slate-950 text-xs font-bold shrink-0 transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Phase</span>
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Tab 3: Machines & Tooling */}
       {(activeTab === 'machines' || false) && (
         <div className="space-y-4">
@@ -778,8 +1184,82 @@ export const ManufacturingPlannerPage: React.FC<ManufacturingPlannerPageProps> =
         </div>
       )}
 
+      {/* Tab: Waste & Circular Management */}
+      {(activeTab === 'waste' || false) && (
+        <div className="space-y-6">
+          <div>
+            <h3 className="text-base font-bold text-white flex items-center gap-2">
+              <Leaf className="w-4 h-4 text-emerald-400" />
+              <span>Waste Reduction & Circular Manufacturing Protocols</span>
+            </h3>
+            <p className="text-xs text-slate-400 mt-1">
+              Zero-waste initiatives, scrap reclamation, coolant recovery, and eco-packaging specifications.
+            </p>
+          </div>
+
+          <div className="bg-slate-900/90 rounded-2xl border border-slate-800 p-5 space-y-4">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              Active Circular Strategies ({activePlan.wasteManagement?.length || 0})
+            </h4>
+
+            <div className="space-y-2.5">
+              {(activePlan.wasteManagement || []).map((strategy, idx) => (
+                <div
+                  key={idx}
+                  className="p-3.5 rounded-xl bg-slate-950/60 border border-emerald-500/20 text-xs text-slate-200 flex items-center justify-between gap-3"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Leaf className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>{strategy}</span>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteWasteStrategy(idx)}
+                    className="no-print text-slate-500 hover:text-rose-400 p-1"
+                    title="Delete strategy"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Add Waste Strategy Form */}
+            <form onSubmit={handleAddWasteStrategy} className="no-print pt-3 border-t border-slate-850 flex items-center gap-2">
+              <input
+                type="text"
+                placeholder="Add scrap recovery loop (e.g. 'Compact CNC aluminum chips into pucks to reclaim 98% cutting fluid')..."
+                value={newWasteItem}
+                onChange={e => setNewWasteItem(e.target.value)}
+                className="flex-1 px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+              />
+              <button
+                type="submit"
+                className="flex items-center gap-1 px-3.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold shrink-0 transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Protocol</span>
+              </button>
+            </form>
+          </div>
+
+          {/* Plan Notes Editor */}
+          <div className="bg-slate-900/90 rounded-2xl border border-slate-800 p-5 space-y-3">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              General Engineering Notes & Remarks
+            </h4>
+            <textarea
+              rows={3}
+              value={activePlan.notes}
+              onChange={e => setActivePlan({ ...activePlan, notes: e.target.value })}
+              className="w-full p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-teal-500"
+              placeholder="Engineering assumptions, supplier requirements, and tooling notes..."
+            />
+          </div>
+        </div>
+      )}
+
       {/* Tab 6: Prototype Tests */}
-      {(activeTab === 'testing' || false) && (
+      {activeTab === 'testing' && (
         <div className="space-y-4">
           <h3 className="text-base font-bold text-white flex items-center gap-2">
             <ClipboardList className="w-4 h-4 text-emerald-400" />
@@ -817,7 +1297,7 @@ export const ManufacturingPlannerPage: React.FC<ManufacturingPlannerPageProps> =
       )}
 
       {/* Tab 7: Costs & Budget Summary */}
-      {(activeTab === 'costs' || false) && (
+      {activeTab === 'costs' && (
         <div className="space-y-6">
           <h3 className="text-base font-bold text-white flex items-center gap-2">
             <DollarSign className="w-4 h-4 text-emerald-400" />

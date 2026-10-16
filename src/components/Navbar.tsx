@@ -14,7 +14,10 @@ import {
   X,
   Cpu,
   Calculator,
-  HelpCircle
+  HelpCircle,
+  ShieldCheck,
+  Activity,
+  Globe
 } from 'lucide-react';
 import { UserSettings } from '../types';
 
@@ -46,6 +49,9 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'generator', label: 'AI Idea Generator', icon: Sparkles, badge: 'AI' },
     { id: 'knowledge', label: 'Knowledge Hub', icon: BookOpen },
     { id: 'planner', label: 'Manufacturing Planner', icon: ClipboardList },
+    { id: 'dfm', label: 'DFM Analyzer', icon: ShieldCheck, badge: 'New' },
+    { id: 'simulator', label: 'Plant OEE', icon: Activity, badge: 'New' },
+    { id: 'rfq', label: 'Supplier RFQ', icon: Globe, badge: 'New' },
     { id: 'explorer', label: 'Materials & Machines', icon: Layers },
     { id: 'sustainability', label: 'Sustainability', icon: Leaf },
     { id: 'prototyping', label: 'Prototype Guide', icon: Wrench },

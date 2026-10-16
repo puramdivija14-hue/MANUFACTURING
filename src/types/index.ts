@@ -191,3 +191,80 @@ export interface UserSettings {
   openaiApiKey: string;
   currency: string;
 }
+
+export type DFMProcessType =
+  | 'injection-molding'
+  | 'cnc-milling'
+  | 'sheet-metal'
+  | '3d-printing'
+  | 'die-casting';
+
+export interface DFMRuleCheck {
+  id: string;
+  name: string;
+  parameter: string;
+  value: number | string;
+  recommendedRange: string;
+  status: 'pass' | 'warning' | 'fail';
+  risk: string;
+  remediation: string;
+}
+
+export interface DFMAnalysisResult {
+  process: DFMProcessType;
+  score: number;
+  status: 'optimal' | 'moderate-risk' | 'high-risk';
+  summary: string;
+  rules: DFMRuleCheck[];
+  estimatedCostImpact: string;
+  suggestedRemedies: string[];
+}
+
+export interface OEESimulatorInput {
+  shiftHours: number;
+  plannedDowntimeMinutes: number;
+  unplannedDowntimeMinutes: number;
+  idealCycleTimeSeconds: number;
+  totalPartsProduced: number;
+  defectiveParts: number;
+  hourlyLaborRate: number;
+  materialCostPerPart: number;
+  salePricePerPart: number;
+}
+
+export interface OEESimulatorResult {
+  availability: number;
+  performance: number;
+  quality: number;
+  oee: number;
+  operatingTimeMinutes: number;
+  goodUnits: number;
+  scrapCost: number;
+  lostRevenueDowntime: number;
+  totalProducedRevenue: number;
+  sixBigLosses: {
+    breakdowns: number;
+    setupAndAdjustments: number;
+    smallStops: number;
+    reducedSpeed: number;
+    startupRejects: number;
+    productionRejects: number;
+  };
+}
+
+export interface RFQComparisonInput {
+  partName: string;
+  annualVolume: number;
+  batchSize: number;
+  targetMaterial: string;
+  domesticTooling: number;
+  domesticUnitCost: number;
+  domesticLeadWeeks: number;
+  offshoreTooling: number;
+  offshoreUnitCost: number;
+  offshoreLeadWeeks: number;
+  shippingPerUnit: number;
+  tariffPercentage: number;
+  defectRiskMarginPercent: number;
+}
+

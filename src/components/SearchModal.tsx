@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, BookOpen, Layers, Cpu, ArrowRight } from 'lucide-react';
+import { Search, X, BookOpen, Layers, Cpu, ArrowRight, ShieldCheck, Activity, Globe } from 'lucide-react';
 import { KNOWLEDGE_TOPICS } from '../data/knowledgeTopics';
 import { MATERIALS_DATA } from '../data/materialsData';
 import { MACHINES_DATA } from '../data/machinesData';
@@ -7,7 +7,7 @@ import { MACHINES_DATA } from '../data/machinesData';
 interface SearchModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelectResult: (category: 'knowledge' | 'material' | 'machine', id: string) => void;
+  onSelectResult: (category: 'knowledge' | 'material' | 'machine' | 'tool', id: string) => void;
 }
 
 export const SearchModal: React.FC<SearchModalProps> = ({
@@ -43,6 +43,42 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 
   const cleanQuery = query.toLowerCase().trim();
 
+  const toolItems = [
+    {
+      id: 'dfm',
+      title: 'DFM Analyzer & Defect Predictor',
+      tag: 'Design for Manufacturability',
+      icon: ShieldCheck,
+      desc: 'Check part geometry rules for CNC, Injection Molding, Sheet Metal, 3D printing & Die casting.',
+      keywords: ['dfm', 'defect', 'rule', 'injection', 'molding', 'cnc', 'sheet metal', 'sink', 'draft', 'radius', 'wall', 'die casting']
+    },
+    {
+      id: 'simulator',
+      title: 'Plant OEE & Shift Production Simulator',
+      tag: 'Shop Floor Digital Twin',
+      icon: Activity,
+      desc: 'Simulate shop floor throughput, calculate Availability × Performance × Quality, and find line bottlenecks.',
+      keywords: ['oee', 'simulator', 'shift', 'throughput', 'bottleneck', 'downtime', 'scrap', 'losses', 'tpm', 'availability']
+    },
+    {
+      id: 'rfq',
+      title: 'Supplier RFQ & Sourcing Estimator',
+      tag: 'Supply Chain Sourcing',
+      icon: Globe,
+      desc: 'Calculate domestic vs offshore landed costs, tooling break-even volumes, and generate formal RFQ packages.',
+      keywords: ['rfq', 'quote', 'supplier', 'sourcing', 'offshore', 'domestic', 'tariff', 'freight', 'vendor', 'landed', 'breakeven']
+    }
+  ];
+
+  const matchingTools = cleanQuery
+    ? toolItems.filter(
+        t =>
+          t.title.toLowerCase().includes(cleanQuery) ||
+          t.desc.toLowerCase().includes(cleanQuery) ||
+          t.keywords.some(k => k.includes(cleanQuery))
+      )
+    : [];
+
   const matchingTopics = cleanQuery
     ? KNOWLEDGE_TOPICS.filter(
         t =>
@@ -72,7 +108,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
     : [];
 
   const totalResults =
-    matchingTopics.length + matchingMaterials.length + matchingMachines.length;
+    matchingTools.length + matchingTopics.length + matchingMaterials.length + matchingMachines.length;
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-24 px-4 bg-slate-950/80 backdrop-blur-md">
@@ -122,6 +158,46 @@ export const SearchModal: React.FC<SearchModalProps> = ({
             <div className="py-8 text-center text-slate-400 text-xs">
               <p className="text-slate-300 font-semibold mb-1">No matching results found for "{query}"</p>
               <p>Try searching for a broader term like "casting", "polymer", "robotics", or "quality".</p>
+            </div>
+          )}
+
+          {/* Specialized Production Studios */}
+          {matchingTools.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-cyan-400 mb-2">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Production & Sourcing Studios ({matchingTools.length})</span>
+              </div>
+              <div className="space-y-1.5">
+                {matchingTools.map(tool => {
+                  const Icon = tool.icon;
+                  return (
+                    <div
+                      key={tool.id}
+                      onClick={() => {
+                        onSelectResult('tool', tool.id);
+                        onClose();
+                      }}
+                      className="flex items-center justify-between p-2.5 rounded-xl bg-slate-850 hover:bg-slate-800 border border-slate-800/80 hover:border-cyan-500/40 cursor-pointer transition-all group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-7 h-7 rounded-lg bg-cyan-500/15 text-cyan-400 flex items-center justify-center shrink-0">
+                          <Icon className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="text-xs sm:text-sm font-semibold text-white group-hover:text-cyan-300">
+                            {tool.title}
+                          </div>
+                          <div className="text-[11px] text-slate-400 line-clamp-1">
+                            {tool.desc}
+                          </div>
+                        </div>
+                      </div>
+                      <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-cyan-400 group-hover:translate-x-1 transition-transform shrink-0 ml-2" />
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
 

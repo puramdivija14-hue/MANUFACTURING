@@ -788,6 +788,51 @@ Provide crisp, structured, and technically sound engineering answers. Include sp
   } {
     const q = query.toLowerCase();
 
+    if (q.includes('dfm') || q.includes('rule') || q.includes('undercut') || q.includes('sink mark') || q.includes('defect')) {
+      return {
+        text: `### 🛡️ Design for Manufacturability (DFM) Core Principles:
+* **Injection Molding**: Keep wall thickness uniform (1.5–3.5mm), apply 1.0°–1.5° draft angles per side, and limit rib base thickness to 50–60% of base wall to avoid cosmetic sink marks.
+* **CNC Milling**: Maintain cavity depth-to-width ratio ≤ 3:1 to eliminate tool chatter; internal vertical corners should have fillet radius R ≥ 1.5mm (larger than cutter radius).
+* **Sheet Metal**: Internal bend radius must be ≥ 1.0× sheet thickness (T); maintain hole-to-bend distance ≥ 2.5× T to prevent oval hole stretching.
+* **Die Casting**: Require draft ≥ 1.5° on outside walls and ≥ 2.0° on internal cores to prevent molten alloy soldering.`,
+        suggestedAction: {
+          type: 'plan',
+          payload: 'DFM verified engineered component',
+          label: 'Run DFM Rule Analyzer'
+        }
+      };
+    }
+
+    if (q.includes('oee') || q.includes('throughput') || q.includes('bottleneck') || q.includes('uptime') || q.includes('losses')) {
+      return {
+        text: `### 📈 Overall Equipment Effectiveness (OEE) & Bottleneck Guide:
+* **The 3 OEE Pillars**: **Availability** (Operating Time / Planned Time) × **Performance** (Actual Speed / Ideal Speed) × **Quality** (Good Units / Total Units).
+* **World-Class Target**: OEE ≥ **85%** (Availability ≥ 90%, Performance ≥ 95%, Quality ≥ 99.9%).
+* **Bottleneck Constraint**: The slowest process step dictates overall line capacity. Maximum line output = 3600 / Bottleneck Cycle Time (sec).
+* **TPM 6 Big Losses**: 1) Equipment Breakdowns, 2) Setup & Adjustments, 3) Small Stops, 4) Reduced Speed, 5) Startup Rejects, 6) Production Scrap.`,
+        suggestedAction: {
+          type: 'plan',
+          payload: 'Production cell line balancing & OEE optimization',
+          label: 'Open Plant OEE Simulator'
+        }
+      };
+    }
+
+    if (q.includes('rfq') || q.includes('sourcing') || q.includes('offshore') || q.includes('vendor') || q.includes('landed cost')) {
+      return {
+        text: `### 🌐 Supplier RFQ & Sourcing Decision Framework:
+* **Total Landed Cost**: Tooling CapEx + Piece Price + Sea/Air Freight + Customs Tariffs + Inventory Buffer Cost + Scrap Risk Margin.
+* **Break-Even Crossover Volume**: Offshore tooling ($6k–$15k) pays off only when piece savings surpass higher tooling, sea freight, and import tariffs.
+* **Lead Time Tradeoff**: Domestic delivery takes 2–3 weeks (agile iteration) vs 8–12 weeks offshore (requires safety stock and working capital).
+* **Quality Assurance**: Require First Article Inspection (FAIR AS9102 / PPAP Level 3) and Mill Test Reports (MTR) before issuing balance payments.`,
+        suggestedAction: {
+          type: 'plan',
+          payload: 'Supplier RFQ package and procurement specification',
+          label: 'Open Supplier RFQ Estimator'
+        }
+      };
+    }
+
     if (q.includes('cnc') || q.includes('machin') || q.includes('milling') || q.includes('lathe')) {
       return {
         text: `### ⚙️ CNC Machining & Milling Engineering Recommendations:
